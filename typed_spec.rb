@@ -14,6 +14,11 @@ class NestedStruct < TypedStruct
   define :n, :int
 end
 
+class JSONTagStruct < TypedStruct
+  define :foo, :string, json: 'foo_key,omitempty'
+  define :bar, :string, json: '-'
+end
+
 describe 'TypedStruct' do
   it 'プリミティブ型の初期値を未指定' do
     v = NormalStruct.new
@@ -69,10 +74,10 @@ end
 describe 'TypeStruct json' do
   it 'jsonに変換できる' do
     v = NormalStruct.new n: 53, str: 'Hello, world!'
-    expect(v.to_json).to eq '{"n":53,"str":"Hello, world!"}'
+    expect(TypedSerde::JSON.marshal(v)).to eq '{"n":53,"str":"Hello, world!"}'
 
     v = NestedStruct.new(nest: NestedStruct.new(n: 3))
-    expect(v.to_json).to eq '{"nest":{"nest":null,"n":3},"n":0}'
+    expect(TypedSerde::JSON.marshal(v)).to eq '{"nest":{"nest":null,"n":3},"n":0}'
   end
 
   it 'jsonから変換できる' do

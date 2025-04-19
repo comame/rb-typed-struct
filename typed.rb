@@ -1,12 +1,11 @@
 # frozen_string_literal: true
 
+require 'json'
+
 class TypedStruct
   class << self
-    def define(name, type)
-      is_typed_struct = false
-      is_typed_struct = type.superclass == TypedStruct if type.respond_to? :superclass
-
-      raise ArgumentError, "unsupported type #{type}" unless __zero_values.key?(type) || is_typed_struct
+    def define(name, type, tags = [])
+      raise ArgumentError, "type #{type.inspect} is not supported type" unless Typed::Internal.supported_type?(type)
 
       __attributes[name] = type
 
@@ -17,23 +16,6 @@ class TypedStruct
       end
     end
 
-    def __zero_values
-      {
-        int: 0,
-        string: '',
-        any: nil
-      }.freeze
-    end
-
-    def __typed_struct_type?(t)
-      return true if t.nil?
-
-      return false unless t.respond_to? :superclass
-      return false unless t.superclass == TypedStruct
-
-      true
-    end
-
     def __attributes
       @__attributes ||= {}
     end
@@ -42,7 +24,7 @@ class TypedStruct
   # インスタンス化時に初期値を指定する場合、{ [key] => value } 形式で渡す
   def initialize(init = {})
     self.class.__attributes.each do |name, type|
-      zero = self.class.__zero_values[type]
+      zero = Typed::Internal.zero_values[type]
       value = init.fetch name, zero
       assign! name, value
     end
@@ -50,6 +32,7 @@ class TypedStruct
 
   # JSON に変換
   def to_json(*args)
+    # FIXME: TypedSerde に移行
     hash = {}
     self.class.__attributes.each_key do |name|
       hash[name] = instance_variable_get "@#{name}"
@@ -76,25 +59,68 @@ class TypedStruct
 
   def safe_assign(to, value)
     t = self.class.__attributes[to]
-    return false if t.nil?
-
-    valid = false
-    # プリミティブな型のチェック
-    case t
-    when :int
-      valid = value.is_a? Integer
-    when :string
-      valid = value.is_a? String
-    when :any
-      valid = true
-    end
-    # TypedStruct のチェック
-    valid = value.nil? || value.is_a?(t) if self.class.__typed_struct_type? t
-
-    return false unless valid
+    return false unless Typed::Internal.type_correct?(t, value)
 
     instance_variable_set "@#{to}", value
-
     true
+  end
+end
+
+module Typed
+  module Internal
+    def supported_primitives
+      %i[int string any]
+    end
+
+    def zero_values
+      {
+        int: 0,
+        string: '',
+        any: nil
+      }
+    end
+
+    def supported_type?(t)
+      return true if t.is_a?(Symbol) && supported_primitives.include?(t)
+
+      return false unless t.respond_to? :superclass
+      return false unless t.superclass == TypedStruct
+
+      true
+    end
+
+    def type_correct?(t, v)
+      raise ArgumentError, "t #{t.inspect}is not supported type" unless supported_type?(t)
+
+      case t
+      when :int
+        return v.is_a? Integer
+      when :string
+        return v.is_a? String
+      when :any
+        return true
+      end
+
+      # プリミティブでないなら、常に TypedStruct であるはず
+      v.nil? || v.is_a?(t)
+    end
+
+    RubyJSON = JSON
+
+    module_function :supported_primitives, :zero_values, :supported_type?, :type_correct?
+  end
+end
+
+module TypedSerde
+  module JSON
+    def marshal(v)
+      Typed::Internal::RubyJSON.generate v
+    end
+
+    def unmarshal(data, obj)
+      Typed::Internal::RubyJSON.parse data, object_class: obj
+    end
+
+    module_function :marshal, :unmarshal
   end
 end
