@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'rspec'
+require 'json'
 require './typed'
 
 class StructA < TypedStruct
@@ -34,18 +35,6 @@ describe 'TypedStruct' do
     expect(v.str).to eq ''
   end
 
-  it 'safe_assign で代入できる' do
-    v = StructB.new
-
-    ok = v.safe_assign :n, 3
-    expect(ok).to be true
-    expect(v.n).to eq 3
-
-    ok = v.safe_assign :n, '30'
-    expect(ok).to be false
-    expect(v.n).to eq 3
-  end
-
   it '=で代入できる' do
     v = StructB.new
 
@@ -58,5 +47,41 @@ describe 'TypedStruct' do
   it '初期化時に値を指定できる' do
     expect(StructB.new(n: 3).n).to eq 3
     expect { StructB.new(n: '10') }.to raise_error TypeError
+  end
+
+  it 'hash-likeに代入・取得できる' do
+    v = StructA.new
+    v['n'] = 53
+    v[:str] = 'Hello, world!'
+
+    expect(v[:n]).to eq 53
+    expect(v['str']).to eq 'Hello, world!'
+  end
+end
+
+describe 'TypeStruct json' do
+  it 'jsonに変換できる' do
+    v = StructA.new n: 53, str: 'Hello, world!'
+    expect(v.to_json).to eq '{"n":53,"str":"Hello, world!"}'
+  end
+
+  it 'jsonから変換できる' do
+    obj = JSON.parse('{"n":53,"str":"Hello, world!"}', object_class: StructA)
+    expect(obj.n).to eq 53
+    expect(obj.str).to eq 'Hello, world!'
+
+    arr = JSON.parse('[{"n":53,"str":"Hello, world!"}]', object_class: StructA)
+    expect(arr[0].n).to eq 53
+    expect(arr[0].str).to eq 'Hello, world!'
+    expect(arr.length).to eq 1
+  end
+
+  it 'jsonからのパース時、型が違ったらエラーを吐ける' do
+    expect { JSON.parse('{"n":"53"}', object_class: StructB) }.to raise_error TypeError
+  end
+
+  it 'jsonからのパース時、値が指定されていなければzero-valueが入る' do
+    obj = JSON.parse('{}', object_class: StructB)
+    expect(obj.n).to eq 0
   end
 end
