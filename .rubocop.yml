@@ -6,3 +6,5 @@ Naming/MethodParameterName:
   Enabled: false
 Style/Documentation:
   Enabled: false
+Metrics/CyclomaticComplexity:
+  Enabled: false

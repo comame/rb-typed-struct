@@ -13,6 +13,11 @@ class StructB < TypedStruct
   define :n, :int
 end
 
+class StructC < TypedStruct
+  define :nest, StructC
+  define :n, :int
+end
+
 describe 'TypedStruct' do
   it 'プリミティブ型の初期値を未指定' do
     v = StructA.new
@@ -57,12 +62,24 @@ describe 'TypedStruct' do
     expect(v[:n]).to eq 53
     expect(v['str']).to eq 'Hello, world!'
   end
+
+  it 'ネストした定義をかける' do
+    v = StructC.new(nest: StructC.new(n: 3))
+
+    expect(v.nest).to be_a StructC
+    expect(v.n).to eq 0
+    expect(v.nest.nest).to eq nil
+    expect(v.nest.n).to eq 3
+  end
 end
 
 describe 'TypeStruct json' do
   it 'jsonに変換できる' do
     v = StructA.new n: 53, str: 'Hello, world!'
     expect(v.to_json).to eq '{"n":53,"str":"Hello, world!"}'
+
+    v = StructC.new(nest: StructC.new(n: 3))
+    expect(v.to_json).to eq '{"nest":{"nest":null,"n":3},"n":0}'
   end
 
   it 'jsonから変換できる' do
@@ -74,6 +91,11 @@ describe 'TypeStruct json' do
     expect(arr[0].n).to eq 53
     expect(arr[0].str).to eq 'Hello, world!'
     expect(arr.length).to eq 1
+
+    nested = JSON.parse('{"nest":{"nest":null,"n":3},"n":0}', object_class: StructC)
+    expect(nested.nest.nest).to eq nil
+    expect(nested.nest.n).to eq 3
+    expect(nested.n).to eq 0
   end
 
   it 'jsonからのパース時、型が違ったらエラーを吐ける' do

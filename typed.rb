@@ -12,7 +12,6 @@ class TypedStruct
 
       attr_reader name
 
-      # safe_assign と異なり、= で代入したときは型チェックに失敗したら例外を投げる
       define_method "#{name}=" do |v|
         assign! name, v
       end
@@ -27,6 +26,8 @@ class TypedStruct
     end
 
     def __typed_struct_type?(t)
+      return true if t.nil?
+
       return false unless t.respond_to? :superclass
       return false unless t.superclass == TypedStruct
 
@@ -70,7 +71,7 @@ class TypedStruct
     ok = safe_assign to, value
     return if ok
 
-    raise TypeError, "cannot assign #{value} to #{self.class}.#{to}"
+    raise TypeError, "cannot assign #{value.inspect} to #{self.class}.#{to}"
   end
 
   def safe_assign(to, value)
@@ -88,7 +89,7 @@ class TypedStruct
       valid = true
     end
     # TypedStruct のチェック
-    valid = value.is_a? t if self.class.__typed_struct_type? t
+    valid = value.nil? || value.is_a?(t) if self.class.__typed_struct_type? t
 
     return false unless valid
 
