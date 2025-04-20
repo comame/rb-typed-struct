@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require 'rspec'
-require 'json'
 require './typed'
 
 class NormalStruct < TypedStruct
@@ -98,27 +97,27 @@ describe 'TypeStruct json' do
   end
 
   it 'jsonから変換できる' do
-    obj = JSON.parse('{"n":53,"str":"Hello, world!"}', object_class: NormalStruct)
+    obj = TypedSerde::JSON.unmarshal('{"n":53,"str":"Hello, world!"}', NormalStruct)
     expect(obj.n).to eq 53
     expect(obj.str).to eq 'Hello, world!'
 
-    arr = JSON.parse('[{"n":53,"str":"Hello, world!"}]', object_class: NormalStruct)
+    arr = TypedSerde::JSON.unmarshal('[{"n":53,"str":"Hello, world!"}]', NormalStruct)
     expect(arr[0].n).to eq 53
     expect(arr[0].str).to eq 'Hello, world!'
     expect(arr.length).to eq 1
 
-    nested = JSON.parse('{"nest":{"nest":null,"n":3},"n":0}', object_class: NestedStruct)
+    nested = TypedSerde::JSON.unmarshal('{"nest":{"nest":null,"n":3},"n":0}', NestedStruct)
     expect(nested.nest.nest).to eq nil
     expect(nested.nest.n).to eq 3
     expect(nested.n).to eq 0
   end
 
   it 'jsonからのパース時、型が違ったらエラーを吐ける' do
-    expect { JSON.parse('{"n":"53"}', object_class: NormalStruct) }.to raise_error TypeError
+    expect { TypedSerde::JSON.unmarshal('{"n":"53"}', NormalStruct) }.to raise_error TypeError
   end
 
   it 'jsonからのパース時、値が指定されていなければzero-valueが入る' do
-    obj = JSON.parse('{}', object_class: NormalStruct)
+    obj = TypedSerde::JSON.unmarshal('{}', NormalStruct)
     expect(obj.n).to eq 0
     expect(obj.str).to eq ''
   end

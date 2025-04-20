@@ -4,10 +4,13 @@ require 'json'
 
 class TypedStruct
   class << self
-    def define(name, type, tags = [])
-      raise ArgumentError, "type #{type.inspect} is not supported type" unless Typed::Internal.supported_type?(type)
+    def define(name, typedef, tags = [])
+      unless Typed::Internal.supported_type?(typedef)
+        raise ArgumentError,
+              "typedef #{typedef.inspect} is not supported"
+      end
 
-      __attributes[name] = type
+      __attributes[name] = typedef
 
       attr_reader name
 
@@ -23,8 +26,8 @@ class TypedStruct
 
   # インスタンス化時に初期値を指定する場合、{ [key] => value } 形式で渡す
   def initialize(init = {})
-    self.class.__attributes.each do |name, type|
-      zero = Typed::Internal.zero_value type
+    self.class.__attributes.each do |name, typedef|
+      zero = Typed::Internal.zero_value typedef
       value = init.fetch name, zero
       assign! name, value
     end
@@ -58,8 +61,8 @@ class TypedStruct
   end
 
   def safe_assign(to, value)
-    t = self.class.__attributes[to]
-    return false unless Typed::Internal.type_correct?(t, value)
+    typedef = self.class.__attributes[to]
+    return false unless Typed::Internal.type_correct?(typedef, value)
 
     instance_variable_set "@#{to}", value
     true
@@ -68,52 +71,52 @@ end
 
 module Typed
   module Internal
-    def self.zero_value(t)
-      if primitive_typedef? t
+    def self.zero_value(typedef)
+      if primitive_typedef? typedef
         return {
           int: 0,
           string: '',
           any: nil
-        }[t]
+        }[typedef]
       end
 
-      return nil if typed_struct_typedef? t
+      return nil if typed_struct_typedef? typedef
 
-      return [] if array_typedef? t
+      return [] if array_typedef? typedef
 
-      raise TypeError, "type #{t.inspect} is not supported type"
+      raise TypeError, "typedef #{typedef.inspect} is not supported"
     end
 
-    def self.primitive_typedef?(t)
-      %i[int string any].include? t
+    def self.primitive_typedef?(typedef)
+      %i[int string any].include? typedef
     end
 
-    def self.typed_struct_typedef?(t)
-      return false unless t.respond_to? :superclass
-      return false unless t.superclass == TypedStruct
+    def self.typed_struct_typedef?(typedef)
+      return false unless typedef.respond_to? :superclass
+      return false unless typedef.superclass == TypedStruct
 
       true
     end
 
-    def self.array_typedef?(t)
-      return false unless t.is_a? Array
-      return false unless t.length == 1
-      return false unless supported_type?(t[0])
+    def self.array_typedef?(typedef)
+      return false unless typedef.is_a? Array
+      return false unless typedef.length == 1
+      return false unless supported_type?(typedef[0])
 
       true
     end
 
-    def self.supported_type?(t)
-      return true if primitive_typedef?(t)
-      return true if array_typedef?(t)
-      return true if typed_struct_typedef?(t)
+    def self.supported_type?(typedef)
+      return true if primitive_typedef?(typedef)
+      return true if array_typedef?(typedef)
+      return true if typed_struct_typedef?(typedef)
 
       false
     end
 
-    def self.type_correct?(t, v)
-      if primitive_typedef?(t)
-        case t
+    def self.type_correct?(typedef, v)
+      if primitive_typedef?(typedef)
+        case typedef
         when :int
           return v.is_a? Integer
         when :string
@@ -123,11 +126,11 @@ module Typed
         end
       end
 
-      return v.nil? || v.is_a?(t) if typed_struct_typedef? t
+      return v.nil? || v.is_a?(typedef) if typed_struct_typedef? typedef
 
-      return v.all? { |el| type_correct?(t[0], el) } if array_typedef? t
+      return v.all? { |el| type_correct?(typedef[0], el) } if array_typedef? typedef
 
-      raise ArgumentError, "t #{t.inspect} is not supported type"
+      raise ArgumentError, "typedef #{typedef.inspect} is not supported"
     end
 
     RubyJSON = JSON
@@ -136,10 +139,12 @@ end
 
 module TypedSerde
   module JSON
+    # JSON 文字列に変換する。
     def marshal(v)
       Typed::Internal::RubyJSON.generate v
     end
 
+    # JSON 文字列から TypedStruct に変換する。obj には変換先のクラスを指定する。
     def unmarshal(data, obj)
       Typed::Internal::RubyJSON.parse data, object_class: obj
     end
