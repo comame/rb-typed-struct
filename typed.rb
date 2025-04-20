@@ -19,6 +19,15 @@ class TypedStruct
       end
     end
 
+    # TypedSerialize#unmarshal から呼び出される
+    def unmarshal(hash)
+      hash.each_key do |key|
+        typedef = __attributes[key]
+        hash[key] = typedef.unmarshal hash[key] if Typed::Internal.typed_struct_typedef?(typedef) && !hash[key].nil?
+      end
+      new(hash)
+    end
+
     def __attributes
       @__attributes ||= {}
     end
@@ -33,22 +42,26 @@ class TypedStruct
     end
   end
 
-  # JSON に変換
-  def to_json(*args)
-    # FIXME: TypedSerde に移行
-    hash = {}
-    self.class.__attributes.each_key do |name|
-      hash[name] = instance_variable_get "@#{name}"
-    end
-    hash.to_json(*args)
-  end
-
   def []=(key, value)
     assign! key.to_sym, value
   end
 
   def [](key)
     instance_variable_get "@#{key}"
+  end
+
+  # TypedSerialize#marshal から呼び出される
+  def marshal
+    hash = {}
+    self.class.__attributes.each_key do |name|
+      v = instance_variable_get "@#{name}"
+
+      v = v.marshal if v.is_a?(TypedStruct)
+      v = v.map(&:marshal) if Typed::Internal.array_typedef?(self.class.__attributes[name])
+
+      hash[name] = v
+    end
+    hash
   end
 
   private
@@ -137,16 +150,28 @@ module Typed
   end
 end
 
-module TypedSerde
+module TypedSerialize
+  module MarshalArray
+    refine Array do
+      def marshal
+        map(&:marshal)
+      end
+    end
+  end
+
   module JSON
-    # JSON 文字列に変換する。
+    using TypedSerialize::MarshalArray
+
+    # JSON 文字列に変換する。オブジェクトが marshal() -> String メソッドを持つ場合、そのメソッドの返り値 (Hash) を利用する。
     def marshal(v)
-      Typed::Internal::RubyJSON.generate v
+      h = v.marshal
+      Typed::Internal::RubyJSON.generate h
     end
 
-    # JSON 文字列から TypedStruct に変換する。obj には変換先のクラスを指定する。
-    def unmarshal(data, obj)
-      Typed::Internal::RubyJSON.parse data, object_class: obj
+    # JSON 文字列から typedef で指定した型の TypedStruct に変換する。オブジェクトが unmarshal(Hash) -> T メソッドを持つ場合、そのメソッドを利用する。
+    def unmarshal(data, typedef)
+      h = Typed::Internal::RubyJSON.parse data, symbolize_names: true
+      typedef.unmarshal h
     end
 
     module_function :marshal, :unmarshal
