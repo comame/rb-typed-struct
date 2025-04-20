@@ -14,6 +14,10 @@ class NestedStruct < TypedStruct
   define :n, :int
 end
 
+class ArrayStruct < TypedStruct
+  define :arr, [NormalStruct]
+end
+
 class JSONTagStruct < TypedStruct
   define :foo, :string, json: 'foo_key,omitempty'
   define :bar, :string, json: '-'
@@ -68,6 +72,19 @@ describe 'TypedStruct' do
     expect(v.n).to eq 0
     expect(v.nest.nest).to eq nil
     expect(v.nest.n).to eq 3
+  end
+
+  it '配列を入れられる' do
+    v = ArrayStruct.new
+
+    expect(v.arr).to be_a Array
+    expect(v.arr.length).to eq 0
+
+    v.arr = [NormalStruct.new, NormalStruct.new(n: 53)]
+    expect(v.arr).to be_a Array
+    expect(v.arr.length).to eq 2
+    expect(v.arr[0].n).to eq 0
+    expect(v.arr[1].n).to eq 53
   end
 end
 

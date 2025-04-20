@@ -24,7 +24,7 @@ class TypedStruct
   # インスタンス化時に初期値を指定する場合、{ [key] => value } 形式で渡す
   def initialize(init = {})
     self.class.__attributes.each do |name, type|
-      zero = Typed::Internal.zero_values[type]
+      zero = Typed::Internal.zero_value type
       value = init.fetch name, zero
       assign! name, value
     end
@@ -68,46 +68,69 @@ end
 
 module Typed
   module Internal
-    def supported_primitives
-      %i[int string any]
+    def self.zero_value(t)
+      if primitive_typedef? t
+        return {
+          int: 0,
+          string: '',
+          any: nil
+        }[t]
+      end
+
+      return nil if typed_struct_typedef? t
+
+      return [] if array_typedef? t
+
+      raise TypeError, "type #{t.inspect} is not supported type"
     end
 
-    def zero_values
-      {
-        int: 0,
-        string: '',
-        any: nil
-      }
+    def self.primitive_typedef?(t)
+      %i[int string any].include? t
     end
 
-    def supported_type?(t)
-      return true if t.is_a?(Symbol) && supported_primitives.include?(t)
-
+    def self.typed_struct_typedef?(t)
       return false unless t.respond_to? :superclass
       return false unless t.superclass == TypedStruct
 
       true
     end
 
-    def type_correct?(t, v)
-      raise ArgumentError, "t #{t.inspect}is not supported type" unless supported_type?(t)
+    def self.array_typedef?(t)
+      return false unless t.is_a? Array
+      return false unless t.length == 1
+      return false unless supported_type?(t[0])
 
-      case t
-      when :int
-        return v.is_a? Integer
-      when :string
-        return v.is_a? String
-      when :any
-        return true
+      true
+    end
+
+    def self.supported_type?(t)
+      return true if primitive_typedef?(t)
+      return true if array_typedef?(t)
+      return true if typed_struct_typedef?(t)
+
+      false
+    end
+
+    def self.type_correct?(t, v)
+      if primitive_typedef?(t)
+        case t
+        when :int
+          return v.is_a? Integer
+        when :string
+          return v.is_a? String
+        when :any
+          return true
+        end
       end
 
-      # プリミティブでないなら、常に TypedStruct であるはず
-      v.nil? || v.is_a?(t)
+      return v.nil? || v.is_a?(t) if typed_struct_typedef? t
+
+      return v.all? { |el| type_correct?(t[0], el) } if array_typedef? t
+
+      raise ArgumentError, "t #{t.inspect} is not supported type"
     end
 
     RubyJSON = JSON
-
-    module_function :supported_primitives, :zero_values, :supported_type?, :type_correct?
   end
 end
 
