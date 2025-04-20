@@ -2,6 +2,8 @@
 
 source 'https://rubygems.org'
 
-gem 'rspec'
-
-gem 'rubocop'
+group :development do
+  gem 'rspec'
+  gem 'rubocop'
+  gem 'simplecov'
+end
