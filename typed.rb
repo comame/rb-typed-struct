@@ -23,7 +23,9 @@ class TypedStruct
     def unmarshal(hash)
       hash.each_key do |key|
         typedef = __attributes[key]
+
         hash[key] = typedef.unmarshal hash[key] if Typed::Internal.typed_struct_typedef?(typedef) && !hash[key].nil?
+        hash[key] = hash[key].map { |v| typedef[0].unmarshal(v) } if Typed::Internal.array_typedef? typedef
       end
       new(hash)
     end
@@ -151,20 +153,14 @@ module Typed
 end
 
 module TypedSerialize
-  module MarshalArray
-    refine Array do
-      def marshal
-        map(&:marshal)
-      end
-    end
-  end
-
   module JSON
-    using TypedSerialize::MarshalArray
-
     # JSON 文字列に変換する。オブジェクトが marshal() -> String メソッドを持つ場合、そのメソッドの返り値 (Hash) を利用する。
     def marshal(v)
-      h = v.marshal
+      h = if v.is_a? Array
+            v.map(&:marshal)
+          else
+            v.marshal
+          end
       Typed::Internal::RubyJSON.generate h
     end
 

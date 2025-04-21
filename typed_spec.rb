@@ -107,13 +107,12 @@ describe 'TypeStruct json' do
     expect(obj.n).to eq 53
     expect(obj.str).to eq 'Hello, world!'
 
-    # FIXME: これも通るようにする
-    # array = TypedSerialize::JSON.unmarshal('{"arr":[{"n":0,"str":""},{"n":53,"str":""}]}', ArrayStruct)
-    # expect(array.arr.length).to eq 2
-    # expect(array.arr[0].n).to eq 0
-    # expect(array.arr[0].str).to eq ''
-    # expect(array.arr[1].n).to eq 53
-    # expect(array.arr[1].str).to eq ''
+    array = TypedSerialize::JSON.unmarshal('{"arr":[{"n":0,"str":""},{"n":53,"str":""}]}', ArrayStruct)
+    expect(array.arr.length).to eq 2
+    expect(array.arr[0].n).to eq 0
+    expect(array.arr[0].str).to eq ''
+    expect(array.arr[1].n).to eq 53
+    expect(array.arr[1].str).to eq ''
 
     # FIXME: これも通るようにする
     # arr = TypedSerialize::JSON.unmarshal('[{"n":53,"str":"Hello, world!"}]', [NormalStruct])
