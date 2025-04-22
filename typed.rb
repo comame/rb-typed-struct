@@ -4,12 +4,28 @@ require 'json'
 
 module Typed
   module Internal
+    class Boolean
+      def initialize(value)
+        raise TypeError, "#{value.inspect} is not valid boolean" unless [true, false].include?(value)
+
+        @value = value
+      end
+
+      def serialize
+        @value
+      end
+
+      def self.deserialize(hash)
+        Boolean hash
+      end
+    end
+
     def self.zero_value(typedef)
       primitives = {
         Integer => 0,
         String => '',
         Float => 0.0,
-        # Boolean => false,
+        Boolean => false,
         Object => nil
       }
 
@@ -28,7 +44,7 @@ module Typed
         int: Integer,
         string: String,
         float: Float,
-        # bool: Boolean,
+        bool: Boolean,
         any: Object
       }
     end

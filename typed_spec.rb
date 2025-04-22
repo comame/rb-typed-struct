@@ -6,7 +6,6 @@ require './typed'
 class NormalStruct < TypedStruct
   define :n, :int
   define :str, :string
-  define :b, :bool
   define :f, :float
 end
 
@@ -113,16 +112,16 @@ end
 describe 'TypeStruct json' do
   it 'jsonに変換できる' do
     v = NormalStruct.new n: 53, str: 'Hello, world!'
-    expect(TypedSerialize::JSON.marshal(v)).to eq '{"n":53,"str":"Hello, world!"}'
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"n":53,"str":"Hello, world!","f":0.0}'
 
     v = NestedStruct.new(nest: NestedStruct.new(n: 3))
     expect(TypedSerialize::JSON.marshal(v)).to eq '{"nest":{"nest":null,"n":3},"n":0}'
 
     v = ArrayStruct.new(arr: [NormalStruct.new, NormalStruct.new(n: 53)])
-    expect(TypedSerialize::JSON.marshal(v)).to eq '{"arr":[{"n":0,"str":""},{"n":53,"str":""}]}'
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"arr":[{"n":0,"str":"","f":0.0},{"n":53,"str":"","f":0.0}]}'
 
     v = [NormalStruct.new, NormalStruct.new(n: 53)]
-    expect(TypedSerialize::JSON.marshal(v)).to eq '[{"n":0,"str":""},{"n":53,"str":""}]'
+    expect(TypedSerialize::JSON.marshal(v)).to eq '[{"n":0,"str":"","f":0.0},{"n":53,"str":"","f":0.0}]'
 
     v = DoubleArrayStruct.new map: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     expect(TypedSerialize::JSON.marshal(v)).to eq '{"map":[[0,1,2],[3,4,5],[6,7,8]]}'
