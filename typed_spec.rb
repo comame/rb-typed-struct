@@ -3,7 +3,7 @@
 require 'rspec'
 require './typed'
 
-# 大乳児に型チェックされる構造体を記述できる
+# 代入時に型チェックされる構造体を記述できる
 class NormalStruct < TypedStruct
   define :n, :int
   define :str, :string
