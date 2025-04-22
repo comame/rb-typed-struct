@@ -8,6 +8,10 @@ class NormalStruct < TypedStruct
   define :str, :string
 end
 
+class PrimitiveClassStruct < TypedStruct
+  define :n, Integer
+end
+
 class NestedStruct < TypedStruct
   define :nest, NestedStruct
   define :n, :int
@@ -37,6 +41,12 @@ describe 'TypedStruct' do
     expect(v.str).to eq 'Hello, world!'
 
     expect { NormalStruct.new(n: '10') }.to raise_error TypeError
+  end
+
+  it 'プリミティブ型をクラスで指定した場合' do
+    v = PrimitiveClassStruct.new n: 53
+
+    expect(v.n).to eq 53
   end
 
   it 'プリミティブ型の初期値を部分的に指定した場合' do
@@ -114,11 +124,10 @@ describe 'TypeStruct json' do
     expect(array.arr[1].n).to eq 53
     expect(array.arr[1].str).to eq ''
 
-    # FIXME: これも通るようにする
-    # arr = TypedSerialize::JSON.unmarshal('[{"n":53,"str":"Hello, world!"}]', [NormalStruct])
-    # expect(arr[0].n).to eq 53
-    # expect(arr[0].str).to eq 'Hello, world!'
-    # expect(arr.length).to eq 1
+    arr = TypedSerialize::JSON.unmarshal('[{"n":53,"str":"Hello, world!"}]', [NormalStruct])
+    expect(arr[0].n).to eq 53
+    expect(arr[0].str).to eq 'Hello, world!'
+    expect(arr.length).to eq 1
 
     nested = TypedSerialize::JSON.unmarshal('{"nest":{"nest":null,"n":3},"n":0}', NestedStruct)
     expect(nested.nest.nest).to eq nil
