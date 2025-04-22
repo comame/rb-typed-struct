@@ -141,7 +141,7 @@ class TypedStruct
   using Typed::Internal::SerializableArray
 
   class << self
-    def define(name, typedef, tags = [])
+    def define(name, typedef, tags = {})
       unless Typed::Internal.supported_type?(typedef)
         raise ArgumentError,
               "typedef #{typedef.inspect} is not supported"
