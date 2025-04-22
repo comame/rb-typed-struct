@@ -30,6 +30,7 @@ class DoubleArrayStruct < TypedStruct
   define :map, [[:int]]
 end
 
+# TODO: まだ実装できてない
 class JSONTagStruct < TypedStruct
   define :foo, :string, json: 'foo_key,omitempty'
   define :bar, :string, json: '-'

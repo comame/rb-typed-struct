@@ -224,14 +224,15 @@ module TypedSerialize
   using Typed::Internal::Serializer
 
   module JSON
-    # JSON 文字列に変換する。オブジェクトが serialize() -> Hash メソッドを持つ場合、そのメソッドの返り値 (Hash) を利用する。
+    # JSON 文字列に変換する。
+    # オブジェクトが serialize() -> Hash メソッドを持つ場合、そのメソッドの返り値 (Hash) を利用する。
     def marshal(v)
       h = v.serialize
       Typed::Internal::RubyJSON.generate h
     end
 
-    # JSON 文字列から typedef で指定した型の TypedStruct に変換する。
-    # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, U) -> T<U> のいずれかのメソッドを持つ場合、そのメソッドを利用する。
+    # JSON 文字列から typedef で指定した型に変換する。
+    # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, U) -> T<U> のいずれかのメソッドを持つ場合、その結果を使って変換する。
     def unmarshal(data, typedef)
       h = Typed::Internal::RubyJSON.parse data, symbolize_names: true
 
@@ -239,6 +240,8 @@ module TypedSerialize
         typedef.deserialize_elements h, typedef[0]
       elsif typedef.respond_to? :deserialize
         typedef.deserialize h
+      else
+        h
       end
     end
 
