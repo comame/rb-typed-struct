@@ -29,11 +29,11 @@ module Typed
       }
     end
 
-    def self.as_primitive_class_typedef(typedef)
+    def self.as_class_typedef(typedef)
       return primitive_typedef_classes[typedef] if primitive_typedef?(typedef)
-      return typedef if primitive_class_typedef?(typedef)
+      return [as_class_typedef(typedef[0])] if array_typedef?(typedef)
 
-      raise TypeError, "typedef #{typedef.inspect} is not supported"
+      typedef
     end
 
     def self.primitive_class_typedef?(typedef)
@@ -69,9 +69,9 @@ module Typed
     end
 
     def self.type_correct?(typedef, v)
-      if primitive_typedef?(typedef) || primitive_class_typedef?(typedef)
-        typedef = as_primitive_class_typedef(typedef)
+      raise TypeError, 'ここでシンボルの型定義は登場しないはず' if primitive_typedef?(typedef)
 
+      if primitive_class_typedef?(typedef)
         return true if typedef == Object
 
         return v.is_a?(typedef)
@@ -91,7 +91,7 @@ module Typed
             if element_class.respond_to? :deserialize
               element_class.deserialize v
             elsif element_class.respond_to? :deserialize_elements
-              element_class.deserialize_elements v, element_class
+              element_class.deserialize_elements v, element_class[0]
             else
               v
             end
@@ -130,7 +130,7 @@ class TypedStruct
               "typedef #{typedef.inspect} is not supported"
       end
 
-      __attributes[name] = typedef
+      __attributes[name] = Typed::Internal.as_class_typedef typedef
 
       attr_reader name
 

@@ -21,6 +21,10 @@ class ArrayStruct < TypedStruct
   define :arr, [NormalStruct]
 end
 
+class DoubleArrayStruct < TypedStruct
+  define :map, [[:int]]
+end
+
 class JSONTagStruct < TypedStruct
   define :foo, :string, json: 'foo_key,omitempty'
   define :bar, :string, json: '-'
@@ -95,6 +99,13 @@ describe 'TypedStruct' do
     expect(v.arr[0].n).to eq 0
     expect(v.arr[1].n).to eq 53
   end
+
+  it '二重配列を入れられる' do
+    v = DoubleArrayStruct.new
+
+    v.map = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    expect(v.map).to match [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+  end
 end
 
 describe 'TypeStruct json' do
@@ -110,6 +121,9 @@ describe 'TypeStruct json' do
 
     v = [NormalStruct.new, NormalStruct.new(n: 53)]
     expect(TypedSerialize::JSON.marshal(v)).to eq '[{"n":0,"str":""},{"n":53,"str":""}]'
+
+    v = DoubleArrayStruct.new map: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"map":[[0,1,2],[3,4,5],[6,7,8]]}'
   end
 
   it 'jsonから変換できる' do
@@ -133,6 +147,9 @@ describe 'TypeStruct json' do
     expect(nested.nest.nest).to eq nil
     expect(nested.nest.n).to eq 3
     expect(nested.n).to eq 0
+
+    doubled = TypedSerialize::JSON.unmarshal('{"map":[[0,1,2],[3,4,5],[6,7,8]]}', DoubleArrayStruct)
+    expect(doubled.map).to match [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
   end
 
   it 'jsonからのパース時、型が違ったらエラーを吐ける' do
