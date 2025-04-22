@@ -101,7 +101,7 @@ module Typed
       end
     end
 
-    module Serializer
+    module SerializableArray
       refine Array.singleton_class do
         def deserialize_elements(hash, element_class)
           hash.map do |v|
@@ -138,7 +138,7 @@ module Typed
 end
 
 class TypedStruct
-  using Typed::Internal::Serializer
+  using Typed::Internal::SerializableArray
 
   class << self
     def define(name, typedef, tags = [])
@@ -221,7 +221,7 @@ class TypedStruct
 end
 
 module TypedSerialize
-  using Typed::Internal::Serializer
+  using Typed::Internal::SerializableArray
 
   module JSON
     # JSON 文字列に変換する。
