@@ -6,6 +6,8 @@ require './typed'
 class NormalStruct < TypedStruct
   define :n, :int
   define :str, :string
+  define :b, :bool
+  define :f, :float
 end
 
 class PrimitiveClassStruct < TypedStruct

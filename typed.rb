@@ -8,6 +8,8 @@ module Typed
       primitives = {
         Integer => 0,
         String => '',
+        Float => 0.0,
+        # Boolean => false,
         Object => nil
       }
 
@@ -25,6 +27,8 @@ module Typed
       {
         int: Integer,
         string: String,
+        float: Float,
+        # bool: Boolean,
         any: Object
       }
     end
@@ -139,7 +143,6 @@ class TypedStruct
       end
     end
 
-    # TypedSerialize#unmarshal から呼び出される
     def deserialize(hash)
       return nil if hash.nil?
 
@@ -175,7 +178,6 @@ class TypedStruct
     instance_variable_get "@#{key}"
   end
 
-  # TypedSerialize#marshal から呼び出される
   def serialize
     hash = {}
     self.class.__attributes.each_key do |name|
@@ -216,7 +218,7 @@ module TypedSerialize
     end
 
     # JSON 文字列から typedef で指定した型の TypedStruct に変換する。
-    # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, T) -> T のいずれかのメソッドを持つ場合、そのメソッドを利用する。
+    # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, U) -> T<U> のいずれかのメソッドを持つ場合、そのメソッドを利用する。
     def unmarshal(data, typedef)
       h = Typed::Internal::RubyJSON.parse data, symbolize_names: true
 
