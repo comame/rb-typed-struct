@@ -4,28 +4,12 @@ require 'json'
 
 module Typed
   module Internal
-    class Boolean
-      def initialize(value)
-        raise TypeError, "#{value.inspect} is not valid boolean" unless [true, false].include?(value)
-
-        @value = value
-      end
-
-      def serialize
-        @value
-      end
-
-      def self.deserialize(hash)
-        Boolean hash
-      end
-    end
-
     def self.zero_value(typedef)
       primitives = {
         Integer => 0,
         String => '',
         Float => 0.0,
-        Boolean => false,
+        self::Boolean => false,
         Object => nil
       }
 
@@ -44,7 +28,7 @@ module Typed
         int: Integer,
         string: String,
         float: Float,
-        bool: Boolean,
+        bool: self::Boolean,
         any: Object
       }
     end
@@ -93,6 +77,7 @@ module Typed
 
       if primitive_class_typedef?(typedef)
         return true if typedef == Object
+        return true if typedef == Boolean && self::Boolean.bool?(v)
 
         return v.is_a?(typedef)
       end
@@ -102,6 +87,18 @@ module Typed
       return v.all? { |el| type_correct?(typedef[0], el) } if array_typedef? typedef
 
       raise ArgumentError, "typedef #{typedef.inspect} is not supported"
+    end
+
+    module Boolean
+      def self.bool?(v)
+        [true, false].include? v
+      end
+
+      class Boolean
+        def self.deserialize(hash)
+          hash
+        end
+      end
     end
 
     module Serializer

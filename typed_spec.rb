@@ -9,6 +9,10 @@ class NormalStruct < TypedStruct
   define :f, :float
 end
 
+class BoolStruct < TypedStruct
+  define :b, :bool
+end
+
 class PrimitiveClassStruct < TypedStruct
   define :n, Integer
 end
@@ -107,6 +111,14 @@ describe 'TypedStruct' do
     v.map = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     expect(v.map).to match [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
   end
+
+  it 'booleanを表現できる' do
+    v = BoolStruct.new b: true
+    expect(v.b).to eq true
+
+    v = BoolStruct.new b: false
+    expect(v.b).to eq false
+  end
 end
 
 describe 'TypeStruct json' do
@@ -125,6 +137,12 @@ describe 'TypeStruct json' do
 
     v = DoubleArrayStruct.new map: [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
     expect(TypedSerialize::JSON.marshal(v)).to eq '{"map":[[0,1,2],[3,4,5],[6,7,8]]}'
+
+    v = BoolStruct.new b: true
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"b":true}'
+
+    v = BoolStruct.new b: false
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"b":false}'
   end
 
   it 'jsonから変換できる' do
@@ -151,6 +169,12 @@ describe 'TypeStruct json' do
 
     doubled = TypedSerialize::JSON.unmarshal('{"map":[[0,1,2],[3,4,5],[6,7,8]]}', DoubleArrayStruct)
     expect(doubled.map).to match [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+
+    bool_true = TypedSerialize::JSON.unmarshal('{"b":true}', BoolStruct)
+    expect(bool_true.b).to eq true
+
+    bool_false = TypedSerialize::JSON.unmarshal('{"b":false}', BoolStruct)
+    expect(bool_false.b).to eq false
   end
 
   it 'jsonからのパース時、型が違ったらエラーを吐ける' do
