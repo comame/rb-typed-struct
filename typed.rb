@@ -9,14 +9,14 @@ module Typed
         Integer => 0,
         String => '',
         Float => 0.0,
-        self::Boolean => false,
+        Boolean::BooleanClass => false,
         Object => nil
       }
 
       return primitives[typedef] if primitive_class_typedef? typedef
       return primitives[primitive_typedef_classes[typedef]] if primitive_typedef? typedef
 
-      return nil if typed_struct_typedef? typedef
+      return typedef.new if typed_struct_typedef? typedef
 
       return [] if array_typedef? typedef
 
@@ -28,7 +28,7 @@ module Typed
         int: Integer,
         string: String,
         float: Float,
-        bool: self::Boolean,
+        bool: Boolean::BooleanClass,
         any: Object
       }
     end
@@ -75,14 +75,17 @@ module Typed
     def self.type_correct?(typedef, v)
       raise TypeError, 'ここでシンボルの型定義は登場しないはず' if primitive_typedef?(typedef)
 
+      # :any 以外は nil を許容しない
+      return false if typedef != Object && v.nil?
+
       if primitive_class_typedef?(typedef)
         return true if typedef == Object
-        return true if typedef == Boolean && self::Boolean.bool?(v)
+        return true if typedef == Boolean::BooleanClass && Boolean.bool?(v)
 
         return v.is_a?(typedef)
       end
 
-      return v.nil? || v.is_a?(typedef) if typed_struct_typedef? typedef
+      return v.is_a?(typedef) if typed_struct_typedef? typedef
 
       return v.all? { |el| type_correct?(typedef[0], el) } if array_typedef? typedef
 
@@ -94,7 +97,9 @@ module Typed
         [true, false].include? v
       end
 
-      class Boolean
+      # TrueClass と False クラスを透過的に扱えるようにするためのクラス。
+      # true.is_a? BooleanClass は当然ながら偽なので、その判定は個別に書く必要がある。
+      class BooleanClass
         def self.deserialize(hash)
           hash
         end
@@ -157,6 +162,7 @@ class TypedStruct
     end
 
     def deserialize(hash)
+      # この構造体が nil 許容かどうかはここでは気にしない。後でインスタンス化する際に型チェックされるため。
       return nil if hash.nil?
 
       hash.each_key do |key|

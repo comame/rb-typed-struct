@@ -22,8 +22,7 @@ end
 
 # ネストした構造体を記述できる
 class NestedStruct < TypedStruct
-  define :nest, NestedStruct
-  define :n, :int
+  define :nest, NormalStruct
 end
 
 # 配列を含んだ構造体を記述できる
@@ -47,15 +46,12 @@ class JSONTagStruct < TypedStruct
 end
 
 # TODO: 実装
-# プリミティブに対しても nil を許容できる。デフォルトでは TypedStruct と :any に対してのみ nil が許容される。
+# プリミティブに対しても nil を許容できる。デフォルトでは :any に対してのみ nil が許容される。
 class NilableStruct < TypedStruct
   define :n, :int, allow: 'nil'
-  define :str, :string, allow: 'nil'
-  define :f, :float, allow: 'nil'
-  define :b, :bool, allow: 'nil'
 end
 
-describe 'TypedStruct' do
+describe 'TypedStruct の基本操作' do
   it 'プリミティブ型の初期値を未指定' do
     v = NormalStruct.new
 
@@ -104,11 +100,9 @@ describe 'TypedStruct' do
   end
 
   it 'ネストした定義をかける' do
-    v = NestedStruct.new(nest: NestedStruct.new(n: 3))
+    v = NestedStruct.new(nest: NormalStruct.new(n: 3))
 
-    expect(v.nest).to be_a NestedStruct
-    expect(v.n).to eq 0
-    expect(v.nest.nest).to eq nil
+    expect(v.nest).to be_a NormalStruct
     expect(v.nest.n).to eq 3
   end
 
@@ -126,6 +120,11 @@ describe 'TypedStruct' do
 
     v.arr_int = [0, 1, 2]
     expect(v.arr_int).to match [0, 1, 2]
+
+    v.arr_int = []
+    expect(v.arr_int).to match []
+
+    expect { v.arr_int = ['str'] }.to raise_error TypeError
   end
 
   it '二重配列を入れられる' do
@@ -142,15 +141,31 @@ describe 'TypedStruct' do
     v = BoolStruct.new b: false
     expect(v.b).to eq false
   end
+
+  it 'nil代入を許容しない' do
+    normal = NormalStruct.new
+    expect { normal.n = nil }.to raise_error TypeError
+    expect { normal.str = nil }.to raise_error TypeError
+    expect { normal.f = nil }.to raise_error TypeError
+
+    bool = BoolStruct.new
+    expect { bool.b = nil }.to raise_error TypeError
+
+    nested = NestedStruct.new
+    expect { nested.nest = nil }.to raise_error TypeError
+
+    array = ArrayStruct.new
+    expect { array.arr_struct = nil }.to raise_error TypeError
+  end
 end
 
-describe 'TypeStruct json' do
+describe 'TypeStruct で JSON を扱える' do
   it 'jsonに変換できる' do
     v = NormalStruct.new n: 53, str: 'Hello, world!'
     expect(TypedSerialize::JSON.marshal(v)).to eq '{"n":53,"str":"Hello, world!","f":0.0}'
 
-    v = NestedStruct.new(nest: NestedStruct.new(n: 3))
-    expect(TypedSerialize::JSON.marshal(v)).to eq '{"nest":{"nest":null,"n":3},"n":0}'
+    v = NestedStruct.new(nest: NormalStruct.new(n: 3))
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"nest":{"n":3,"str":"","f":0.0}}'
 
     v = ArrayStruct.new(arr_struct: [NormalStruct.new, NormalStruct.new(n: 53)], arr_int: [0, 1, 2])
     expect(TypedSerialize::JSON.marshal(v)).to eq '{"arr_struct":[{"n":0,"str":"","f":0.0},{"n":53,"str":"","f":0.0}],"arr_int":[0,1,2]}'
@@ -186,10 +201,8 @@ describe 'TypeStruct json' do
     expect(arr[0].str).to eq 'Hello, world!'
     expect(arr.length).to eq 1
 
-    nested = TypedSerialize::JSON.unmarshal('{"nest":{"nest":null,"n":3},"n":0}', NestedStruct)
-    expect(nested.nest.nest).to eq nil
+    nested = TypedSerialize::JSON.unmarshal('{"nest":{"n":3}}', NestedStruct)
     expect(nested.nest.n).to eq 3
-    expect(nested.n).to eq 0
 
     doubled = TypedSerialize::JSON.unmarshal('{"map":[[0,1,2],[3,4,5],[6,7,8]]}', DoubleArrayStruct)
     expect(doubled.map).to match [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
