@@ -4,7 +4,10 @@ require 'json'
 
 module Typed
   module Internal
-    def self.zero_value(typedef)
+    def self.zero_value(typedef, allow_nil)
+      # nil許容だったら、初期値は nil
+      return nil if allow_nil
+
       primitives = {
         Integer => 0,
         String => '',
@@ -72,11 +75,15 @@ module Typed
       false
     end
 
-    def self.type_correct?(typedef, v)
+    def self.type_correct?(typedef, v, allow_nil)
       raise TypeError, 'ここでシンボルの型定義は登場しないはず' if primitive_typedef?(typedef)
 
-      # :any 以外は nil を許容しない
-      return false if typedef != Object && v.nil?
+      if allow_nil
+        return true if v.nil?
+      elsif typedef != Object && v.nil?
+        # :any 以外は nil を許容しない
+        return false
+      end
 
       if primitive_class_typedef?(typedef)
         return true if typedef == Object
@@ -87,7 +94,10 @@ module Typed
 
       return v.is_a?(typedef) if typed_struct_typedef? typedef
 
-      return v.all? { |el| type_correct?(typedef[0], el) } if array_typedef? typedef
+      # 配列型の要素は nil 許容にさせない。
+      # うまい typedef の表記を思いつかないし、そもそも配列の中に nil を混ぜる設計自体があまりよくないので。
+      # どうしても必要なら [:any] で表現してほしい。
+      return v.all? { |el| type_correct?(typedef[0], el, false) } if array_typedef? typedef
 
       raise ArgumentError, "typedef #{typedef.inspect} is not supported"
     end
@@ -153,6 +163,7 @@ class TypedStruct
       end
 
       __attributes[name] = Typed::Internal.as_class_typedef typedef
+      __tags[name] = tags
 
       attr_reader name
 
@@ -178,12 +189,18 @@ class TypedStruct
     def __attributes
       @__attributes ||= {}
     end
+
+    def __tags
+      @__tags ||= {}
+    end
   end
 
   # インスタンス化時に初期値を指定する場合、{ [key] => value } 形式で渡す
   def initialize(init = {})
     self.class.__attributes.each do |name, typedef|
-      zero = Typed::Internal.zero_value typedef
+      allow_nil = self.class.__tags[name][:allow] == 'nil'
+
+      zero = Typed::Internal.zero_value typedef, allow_nil
       value = init.fetch name, zero
       assign! name, value
     end
@@ -219,7 +236,9 @@ class TypedStruct
 
   def safe_assign(to, value)
     typedef = self.class.__attributes[to]
-    return false unless Typed::Internal.type_correct?(typedef, value)
+    allow_nil = self.class.__tags[to][:allow] == 'nil'
+
+    return false unless Typed::Internal.type_correct?(typedef, value, allow_nil)
 
     instance_variable_set "@#{to}", value
     true

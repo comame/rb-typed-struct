@@ -45,8 +45,7 @@ class JSONTagStruct < TypedStruct
   define :bar, :string, json: '-'
 end
 
-# TODO: 実装
-# プリミティブに対しても nil を許容できる。デフォルトでは :any に対してのみ nil が許容される。
+# nil を許容できる。デフォルトでは :any に対してのみ nil が許容される。
 class NilableStruct < TypedStruct
   define :n, :int, allow: 'nil'
 end
@@ -156,6 +155,17 @@ describe 'TypedStruct の基本操作' do
 
     array = ArrayStruct.new
     expect { array.arr_struct = nil }.to raise_error TypeError
+  end
+
+  it 'nil許容' do
+    # nil許容型の初期値はnil
+    zero = NilableStruct.new
+    expect(zero.n).to eq nil
+
+    filled = NilableStruct.new(n: 1)
+    expect(filled.n).to eq 1
+    filled.n = nil
+    expect(filled.n).to eq nil
   end
 end
 
