@@ -185,6 +185,7 @@ class TypedStruct
   using Typed::Internal::SerializableArray
 
   class << self
+    # フィールドを定義する
     def define(name, typedef, tags = {})
       unless Typed::Internal.supported_type?(typedef)
         raise ArgumentError,
@@ -201,10 +202,8 @@ class TypedStruct
       end
     end
 
+    # JSONからパースする
     def deserialize(hash)
-      # この構造体が nil 許容かどうかはここでは気にしない。後でインスタンス化する際に型チェックされるため。
-      return nil if hash.nil?
-
       new_hash = {}
 
       __attributes.each_key do |key|
@@ -214,15 +213,20 @@ class TypedStruct
         json_tag_key = Typed::Internal::JSONTag.json_key_or_nil tag
         json_key = json_tag_key.nil? ? key : json_tag_key.to_sym
 
-        next if hash[json_key].nil?
+        v = hash.fetch(json_key, nil)
+
+        # JSON側に値がなかったら、コンストラクタで初期値を自動的に生成する
+        next if v.nil?
+
+        # - が指定されていたら、JSON側に値があっても無視する
         next if Typed::Internal::JSONTag.should_skip? tag
 
         new_hash[key] = if typedef.respond_to? :deserialize
-                          typedef.deserialize hash[json_key]
+                          typedef.deserialize v
                         elsif typedef.respond_to? :deserialize_elements
-                          typedef.deserialize_elements hash[json_key], typedef[0]
+                          typedef.deserialize_elements v, typedef[0]
                         else
-                          hash[json_key]
+                          v
                         end
       end
 
@@ -238,7 +242,7 @@ class TypedStruct
     end
   end
 
-  # インスタンス化時に初期値を指定する場合、{ [key] => value } 形式で渡す
+  # インスタンス化時に初期値を指定する場合、{ [key_symbol] => value } 形式で渡す
   def initialize(init = {})
     self.class.__attributes.each do |name, typedef|
       allow_nil = self.class.__tags[name][:allow] == 'nil'
@@ -257,6 +261,7 @@ class TypedStruct
     instance_variable_get "@#{key}"
   end
 
+  # JSONにシリアライズする
   def serialize
     hash = {}
     self.class.__attributes.each_key do |name|
@@ -270,7 +275,7 @@ class TypedStruct
       next if Typed::Internal::JSONTag.should_skip?(tag)
 
       if Typed::Internal::JSONTag.omit_empty?(tag)
-        # nil許容の場合、nil以外は省略しない
+        # nil許容の場合、値がnilの時以外はキーを省略しない
         next if Typed::Internal.zero_value?(v) && !allow_nil
         next if v.nil? && allow_nil
       end

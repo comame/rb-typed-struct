@@ -229,6 +229,22 @@ describe 'TypeStruct で JSON を扱える' do
     expect(obj.n).to eq 0
     expect(obj.str).to eq ''
   end
+
+  it 'nilableな構造体型のフィールドにnilが入ってもパースできる' do
+    child = Class.new(TypedStruct) do
+      define :n, :int
+    end
+
+    parent = Class.new(TypedStruct) do
+      define :obj, child, allow: 'nil'
+    end
+
+    parsed = TypedSerialize::JSON.unmarshal('{"obj":null}', parent)
+    expect(parsed.obj).to eq nil
+
+    parsed = TypedSerialize::JSON.unmarshal('{"obj":{"n":1}}', parent)
+    expect(parsed.obj.n).to eq 1
+  end
 end
 
 describe 'タグ付きのJSONをシリアライズできる' do
