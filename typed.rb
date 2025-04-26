@@ -26,9 +26,13 @@ module Typed
       raise TypeError, "typedef #{typedef.inspect} is not supported"
     end
 
-    def self.zero_value?(value)
-      return true if [0, 0.0, '', false, nil].include? value
-      return true if value.is_a?(Array) && value.empty?
+    def self.zero_value?(value, typedef)
+      return true if value.nil?
+
+      return true if primitive_class_typedef?(typedef) && initial_value(typedef, false) == value
+      return true if array_typedef?(typedef) && value.empty?
+
+      return false if typed_struct_typedef?(typedef)
 
       false
     end
@@ -264,7 +268,7 @@ class TypedStruct
   # JSONにシリアライズする
   def serialize
     hash = {}
-    self.class.__attributes.each_key do |name|
+    self.class.__attributes.each do |name, typedef|
       v = instance_variable_get "@#{name}"
 
       allow_nil = self.class.__tags[name][:allow] == 'nil'
@@ -276,7 +280,7 @@ class TypedStruct
 
       if Typed::Internal::JSONTag.omit_empty?(tag)
         # nil許容の場合、値がnilの時以外はキーを省略しない
-        next if Typed::Internal.zero_value?(v) && !allow_nil
+        next if Typed::Internal.zero_value?(v, typedef) && !allow_nil
         next if v.nil? && allow_nil
       end
 

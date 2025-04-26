@@ -280,8 +280,8 @@ describe 'タグ付きのJSONをシリアライズできる' do
       define :any, :any, json: ',omitempty'
     end
 
-    obj = c.new(n: 1, f: 1.1, str: 'a', b: true, arr: [0, 1, 2], nil: 0, any: 1)
-    expect(TypedSerialize::JSON.marshal(obj)).to eq '{"n":1,"f":1.1,"str":"a","b":true,"arr":[0,1,2],"nil":0,"any":1}'
+    obj = c.new(n: 1, f: 1.1, str: 'a', b: true, arr: [0, 1, 2], nil: 0, any: 0)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{"n":1,"f":1.1,"str":"a","b":true,"arr":[0,1,2],"nil":0,"any":0}'
 
     obj = c.new(n: 0, f: 0.0, str: '', b: false, arr: [], nil: nil)
     expect(TypedSerialize::JSON.marshal(obj)).to eq '{}'
