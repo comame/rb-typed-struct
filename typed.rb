@@ -205,14 +205,28 @@ class TypedStruct
       # この構造体が nil 許容かどうかはここでは気にしない。後でインスタンス化する際に型チェックされるため。
       return nil if hash.nil?
 
-      hash.each_key do |key|
-        typedef = __attributes[key]
+      new_hash = {}
 
-        hash[key] = typedef.deserialize hash[key] if typedef.respond_to? :deserialize
-        hash[key] = typedef.deserialize_elements hash[key], typedef[0] if typedef.respond_to? :deserialize_elements
+      __attributes.each_key do |key|
+        typedef = __attributes[key]
+        tag = __tags[key]
+
+        json_tag_key = Typed::Internal::JSONTag.json_key_or_nil tag
+        json_key = json_tag_key.nil? ? key : json_tag_key.to_sym
+
+        next if hash[json_key].nil?
+        next if Typed::Internal::JSONTag.should_skip? tag
+
+        new_hash[key] = if typedef.respond_to? :deserialize
+                          typedef.deserialize hash[json_key]
+                        elsif typedef.respond_to? :deserialize_elements
+                          typedef.deserialize_elements hash[json_key], typedef[0]
+                        else
+                          hash[json_key]
+                        end
       end
 
-      new(hash)
+      new(new_hash)
     end
 
     def __attributes

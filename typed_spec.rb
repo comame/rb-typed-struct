@@ -231,7 +231,7 @@ describe 'TypeStruct で JSON を扱える' do
   end
 end
 
-describe 'タグ付きのJSONをパースできる' do
+describe 'タグ付きのJSONをシリアライズできる' do
   it 'キー名を変更できる' do
     c = Class.new(TypedStruct) do
       define :n, :int, json: 'other_key'
@@ -290,5 +290,41 @@ describe 'タグ付きのJSONをパースできる' do
 
     obj = c.new
     expect(TypedSerialize::JSON.marshal(obj)).to eq '{"-":0}'
+  end
+end
+
+describe 'タグ付きのJSONをパースできる' do
+  it 'キー名を変更できる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: 'other_key'
+    end
+
+    json = TypedSerialize::JSON.unmarshal('{"other_key":1}', c)
+    expect(json).to be_a c
+    expect(json.n).to eq 1
+  end
+
+  it 'キーの省略ができる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: '-'
+    end
+
+    json = TypedSerialize::JSON.unmarshal('{"-":1}', c)
+    expect(json).to be_a c
+    expect(json.n).to eq 0
+
+    json = TypedSerialize::JSON.unmarshal('{"-":0}', c)
+    expect(json).to be_a c
+    expect(json.n).to eq 0
+  end
+
+  it 'キーを-にできる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: '-,'
+    end
+
+    json = TypedSerialize::JSON.unmarshal('{"-":1}', c)
+    expect(json).to be_a c
+    expect(json.n).to eq 1
   end
 end
