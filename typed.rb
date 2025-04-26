@@ -4,7 +4,7 @@ require 'json'
 
 module Typed
   module Internal
-    def self.zero_value(typedef, allow_nil)
+    def self.initial_value(typedef, allow_nil)
       # nil許容だったら、初期値は nil
       return nil if allow_nil
 
@@ -24,6 +24,13 @@ module Typed
       return [] if array_typedef? typedef
 
       raise TypeError, "typedef #{typedef.inspect} is not supported"
+    end
+
+    def self.zero_value?(value)
+      return true if [0, 0.0, '', false, nil].include? value
+      return true if value.is_a?(Array) && value.empty?
+
+      false
     end
 
     def self.primitive_typedef_classes
@@ -116,6 +123,28 @@ module Typed
       end
     end
 
+    module JSONTag
+      def self.json_key_or_nil(tag_hash)
+        key = (tag_hash.fetch :json, '').split(',').first
+
+        return nil if key.nil?
+        return nil if key == ''
+
+        key
+      end
+
+      def self.omit_empty?(tag_hash)
+        opt = (tag_hash.fetch :json, '').split(',')[1]
+
+        opt == 'omitempty'
+      end
+
+      def self.should_skip?(tag_hash)
+        tag_value = tag_hash.fetch :json, ''
+        tag_value == '-'
+      end
+    end
+
     module SerializableArray
       refine Array.singleton_class do
         def deserialize_elements(hash, element_class)
@@ -200,7 +229,7 @@ class TypedStruct
     self.class.__attributes.each do |name, typedef|
       allow_nil = self.class.__tags[name][:allow] == 'nil'
 
-      zero = Typed::Internal.zero_value typedef, allow_nil
+      zero = Typed::Internal.initial_value typedef, allow_nil
       value = init.fetch name, zero
       assign! name, value
     end
@@ -218,9 +247,22 @@ class TypedStruct
     hash = {}
     self.class.__attributes.each_key do |name|
       v = instance_variable_get "@#{name}"
-      v = v.serialize if v.respond_to? :serialize
 
-      hash[name] = v
+      allow_nil = self.class.__tags[name][:allow] == 'nil'
+
+      tag = self.class.__tags[name]
+      json_key = Typed::Internal::JSONTag.json_key_or_nil tag
+
+      next if Typed::Internal::JSONTag.should_skip?(tag)
+
+      if Typed::Internal::JSONTag.omit_empty?(tag)
+        # nil許容の場合、nil以外は省略しない
+        next if Typed::Internal.zero_value?(v) && !allow_nil
+        next if v.nil? && allow_nil
+      end
+
+      v = v.serialize if v.respond_to? :serialize
+      hash[json_key.nil? ? name : json_key] = v
     end
     hash
   end

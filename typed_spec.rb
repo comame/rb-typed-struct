@@ -36,19 +36,15 @@ class DoubleArrayStruct < TypedStruct
   define :map, [[:int]]
 end
 
-# TODO: まだ実装できてない
-# JSON に変換するフォーマットを指定できる
-class JSONTagStruct < TypedStruct
-  # JSON のキーは foo_key であり、zero-value (空文字) の時は省略される
-  define :foo, :string, json: 'foo_key,omitempty'
-  # JSON の値は無視される
-  define :bar, :string, json: '-'
-end
-
 # nil を許容できる。デフォルトでは :any に対してのみ nil が許容される。
 class NilableStruct < TypedStruct
   define :n, :int, allow: 'nil'
 end
+
+# TODO: これはあったほうがよさそうな気がする...
+# class SymbolStruct < TypedStruct
+#   define :sym, :symbol
+# end
 
 describe 'TypedStruct の基本操作' do
   it 'プリミティブ型の初期値を未指定' do
@@ -232,5 +228,67 @@ describe 'TypeStruct で JSON を扱える' do
     obj = TypedSerialize::JSON.unmarshal('{}', NormalStruct)
     expect(obj.n).to eq 0
     expect(obj.str).to eq ''
+  end
+end
+
+describe 'タグ付きのJSONをパースできる' do
+  it 'キー名を変更できる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: 'other_key'
+    end
+
+    obj = c.new
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{"other_key":0}'
+  end
+
+  it 'キー名の変更とomitemptyが両方できる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: 'other_key,omitempty'
+    end
+
+    obj = c.new(n: 1)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{"other_key":1}'
+
+    obj = c.new(n: 0)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{}'
+  end
+
+  it 'キー名の変更はせずにomitemptyだけができる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: ',omitempty'
+      define :f, :float, json: ',omitempty'
+      define :str, :string, json: ',omitempty'
+      define :b, :bool, json: ',omitempty'
+      define :arr, [:int], json: ',omitempty'
+      define :nil, :int, json: ',omitempty', allow: 'nil'
+      define :any, :any, json: ',omitempty'
+    end
+
+    obj = c.new(n: 1, f: 1.1, str: 'a', b: true, arr: [0, 1, 2], nil: 0, any: 1)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{"n":1,"f":1.1,"str":"a","b":true,"arr":[0,1,2],"nil":0,"any":1}'
+
+    obj = c.new(n: 0, f: 0.0, str: '', b: false, arr: [], nil: nil)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{}'
+  end
+
+  it 'キーの省略ができる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: '-'
+    end
+
+    obj = c.new(n: 1)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{}'
+
+    obj = c.new(n: 0)
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{}'
+  end
+
+  it 'キーを-にできる' do
+    c = Class.new(TypedStruct) do
+      define :n, :int, json: '-,'
+    end
+
+    obj = c.new
+    expect(TypedSerialize::JSON.marshal(obj)).to eq '{"-":0}'
   end
 end
