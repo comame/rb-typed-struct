@@ -5,8 +5,10 @@ require 'yaml'
 
 module Typed
   module Internal
+    # 型ごとの初期値を生成。
     def self.initial_value(typedef, allow_nil)
       # nil許容だったら、初期値は nil
+      # (Goのポインタ型の動作を参照。var n *int; n == nil)
       return nil if allow_nil
 
       primitives = {
@@ -28,12 +30,14 @@ module Typed
       raise TypeError, "typedef #{typedef.inspect} is not supported"
     end
 
+    # その値がその型のゼロ値かどうかを判定
     def self.zero_value?(value, typedef)
       return true if value.nil?
 
       return true if primitive_class_typedef?(typedef) && initial_value(typedef, false) == value
       return true if array_typedef?(typedef) && value.empty?
 
+      # 空の構造体はゼロ値とはみなさない。
       return false if typed_struct_typedef?(typedef)
 
       false
@@ -50,6 +54,7 @@ module Typed
       }
     end
 
+    # プリミティブ型のシンボル表現をクラス表現に変換
     def self.as_class_typedef(typedef)
       return primitive_typedef_classes[typedef] if primitive_typedef?(typedef)
       return [as_class_typedef(typedef[0])] if array_typedef?(typedef)
@@ -57,14 +62,17 @@ module Typed
       typedef
     end
 
+    # typedef がプリミティブ型のクラス表現かどうか？
     def self.primitive_class_typedef?(typedef)
       primitive_typedef_classes.value? typedef
     end
 
+    # typedef がプリミティブ型のシンボル表現かどうか？
     def self.primitive_typedef?(typedef)
       primitive_typedef_classes.key? typedef
     end
 
+    # typedef が TypedStruct かどうか？
     def self.typed_struct_typedef?(typedef)
       return false unless typedef.respond_to? :superclass
       return false unless typedef.superclass == TypedStruct
@@ -72,6 +80,7 @@ module Typed
       true
     end
 
+    # typedef が配列型かどうか？
     def self.array_typedef?(typedef)
       return false unless typedef.is_a? Array
       return false unless typedef.length == 1
@@ -80,6 +89,7 @@ module Typed
       true
     end
 
+    # サポートされたtypedefかどうか？
     def self.supported_type?(typedef)
       return true if primitive_typedef?(typedef)
       return true if primitive_class_typedef?(typedef)
@@ -89,6 +99,8 @@ module Typed
       false
     end
 
+    # 値がその型に代入可能かどうか？
+    # この typedef にプリミティブ型のシンボル表現を渡してはならない。
     def self.type_correct?(typedef, v, allow_nil)
       raise TypeError, 'ここでシンボルの型定義は登場しないはず' if primitive_typedef?(typedef)
 
@@ -152,6 +164,7 @@ module Typed
       end
     end
 
+    # serialize, deserialize を Ruby 組み込み型に生やすためのモジュール
     module SerializableObject
       refine Array.singleton_class do
         def deserialize_elements(hash, element_class)
@@ -287,6 +300,7 @@ class TypedStruct
 
       if Typed::Internal::JSONTag.omit_empty?(tag)
         # nil許容の場合、値がnilの時以外はキーを省略しない
+        # (Go のポインタ型の動作を参照。*int は nil の場合省略されるが、0 では省略されない。)
         next if Typed::Internal.zero_value?(v, typedef) && !allow_nil
         next if v.nil? && allow_nil
       end
