@@ -340,7 +340,7 @@ module TypedSerialize
     # JSON 文字列に変換する。
     # オブジェクトが serialize() -> Hash メソッドを持つ場合、そのメソッドの返り値 (Hash) を利用する。
     def marshal(v)
-      h = v.serialize
+      h = Hash.marshal v
       ::JSON.generate h
     end
 
@@ -348,14 +348,7 @@ module TypedSerialize
     # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, U) -> T<U> のいずれかのメソッドを持つ場合、その結果を使って変換する。
     def unmarshal(data, typedef)
       h = ::JSON.parse data, symbolize_names: true
-
-      if typedef.respond_to? :deserialize_elements
-        typedef.deserialize_elements h, typedef[0]
-      elsif typedef.respond_to? :deserialize
-        typedef.deserialize h
-      else
-        h
-      end
+      Hash.unmarshal h, typedef
     end
   end
 
@@ -364,7 +357,7 @@ module TypedSerialize
 
     # 単一の YAML 文字列に変換する。
     def marshal(v)
-      h = v.serialize
+      h = Hash.marshal v
       y = ::YAML.dump h
       y.delete_prefix "---\n"
     end
@@ -373,7 +366,7 @@ module TypedSerialize
     def marshal_stream(list)
       serialized_list = []
       list.each do |v|
-        serialized_list.append v.serialize
+        serialized_list.append(Hash.marshal(v))
       end
 
       y = ::YAML.dump_stream(*serialized_list)
@@ -383,14 +376,7 @@ module TypedSerialize
     # 単一の YAML をパースする。
     def unmarshal(data, typedef)
       h = ::YAML.safe_load data, symbolize_names: true, aliases: true
-
-      if typedef.respond_to? :deserialize_elements
-        typedef.deserialize_elements h, typedef[0]
-      elsif typedef.respond_to? :deserialize
-        typedef.deserialize h
-      else
-        h
-      end
+      Hash.unmarshal h, typedef
     end
 
     # 複数ドキュメントの YAML をパースする
@@ -407,6 +393,26 @@ module TypedSerialize
       end
 
       ret
+    end
+  end
+
+  module Hash
+    module_function
+
+    # Hash に変換する
+    def marshal(v)
+      v.serialize
+    end
+
+    # Hash から変換する
+    def unmarshal(data, typedef)
+      if typedef.respond_to? :deserialize_elements
+        typedef.deserialize_elements data, typedef[0]
+      elsif typedef.respond_to? :deserialize
+        typedef.deserialize data
+      else
+        data
+      end
     end
   end
 end
