@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'yaml'
 
 module Typed
   module Internal
@@ -180,8 +181,6 @@ module Typed
         end
       end
     end
-
-    RubyJSON = JSON
   end
 end
 
@@ -285,7 +284,7 @@ class TypedStruct
       end
 
       v = v.serialize if v.respond_to? :serialize
-      hash[json_key.nil? ? name : json_key] = v
+      hash[json_key.nil? ? name.to_s : json_key] = v
     end
     hash
   end
@@ -314,17 +313,54 @@ module TypedSerialize
   using Typed::Internal::SerializableArray
 
   module JSON
+    module_function
+
     # JSON 文字列に変換する。
     # オブジェクトが serialize() -> Hash メソッドを持つ場合、そのメソッドの返り値 (Hash) を利用する。
     def marshal(v)
       h = v.serialize
-      Typed::Internal::RubyJSON.generate h
+      ::JSON.generate h
     end
 
     # JSON 文字列から typedef で指定した型に変換する。
     # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, U) -> T<U> のいずれかのメソッドを持つ場合、その結果を使って変換する。
     def unmarshal(data, typedef)
-      h = Typed::Internal::RubyJSON.parse data, symbolize_names: true
+      h = ::JSON.parse data, symbolize_names: true
+
+      if typedef.respond_to? :deserialize_elements
+        typedef.deserialize_elements h, typedef[0]
+      elsif typedef.respond_to? :deserialize
+        typedef.deserialize h
+      else
+        h
+      end
+    end
+  end
+
+  module YAML
+    module_function
+
+    # 単一の YAML 文字列に変換する。
+    def marshal(v)
+      h = v.serialize
+      y = ::YAML.dump h
+      y.delete_prefix "---\n"
+    end
+
+    # 複数のドキュメントの YAML 文字列に変換する。
+    def marshal_stream(list)
+      serialized_list = []
+      list.each do |v|
+        serialized_list.append v.serialize
+      end
+
+      y = ::YAML.dump_stream(*serialized_list)
+      y.delete_prefix "---\n"
+    end
+
+    # 単一の YAML をパースする。
+    def unmarshal(data, typedef)
+      h = ::YAML.safe_load data, symbolize_names: true, aliases: true
 
       if typedef.respond_to? :deserialize_elements
         typedef.deserialize_elements h, typedef[0]
@@ -335,6 +371,20 @@ module TypedSerialize
       end
     end
 
-    module_function :marshal, :unmarshal
+    # 複数ドキュメントの YAML をパースする
+    def unmarshal_stream(data, typedefs)
+      docs = data.split '---'
+      docs.filter! do |v|
+        v.strip != ''
+      end
+
+      ret = []
+      typedefs.each do |typedef|
+        doc = docs.shift
+        ret.append unmarshal(doc, typedef)
+      end
+
+      ret
+    end
   end
 end

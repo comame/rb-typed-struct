@@ -14,3 +14,5 @@ Metrics/PerceivedComplexity:
   Enabled: false
 Layout/LineLength:
   Enabled: false
+Naming/HeredocDelimiterNaming:
+  Enabled: false
