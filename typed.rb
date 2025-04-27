@@ -14,6 +14,7 @@ module Typed
         String => '',
         Float => 0.0,
         Boolean::BooleanClass => false,
+        Symbol => ''.to_sym,
         Object => nil
       }
 
@@ -44,7 +45,8 @@ module Typed
         string: String,
         float: Float,
         bool: Boolean::BooleanClass,
-        any: Object
+        any: Object,
+        symbol: Symbol
       }
     end
 
@@ -119,7 +121,7 @@ module Typed
         [true, false].include? v
       end
 
-      # TrueClass と False クラスを透過的に扱えるようにするためのクラス。
+      # TrueClass と FalseClass を透過的に扱えるようにするためのクラス。
       # true.is_a? BooleanClass は当然ながら偽なので、その判定は個別に書く必要がある。
       class BooleanClass
         def self.deserialize(hash)
@@ -150,7 +152,7 @@ module Typed
       end
     end
 
-    module SerializableArray
+    module SerializableObject
       refine Array.singleton_class do
         def deserialize_elements(hash, element_class)
           hash.map do |v|
@@ -180,12 +182,18 @@ module Typed
           Array.deserialize_elements hash, object_class
         end
       end
+
+      refine Symbol.singleton_class do
+        def deserialize(string)
+          string.to_sym
+        end
+      end
     end
   end
 end
 
 class TypedStruct
-  using Typed::Internal::SerializableArray
+  using Typed::Internal::SerializableObject
 
   class << self
     # フィールドを定義する
@@ -310,7 +318,7 @@ class TypedStruct
 end
 
 module TypedSerialize
-  using Typed::Internal::SerializableArray
+  using Typed::Internal::SerializableObject
 
   module JSON
     module_function

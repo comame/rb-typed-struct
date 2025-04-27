@@ -44,13 +44,14 @@ user.age = 'twenty-five'
 
 `define` メソッドの第二引数は、様々な型定義を受け付けます。
 
-プリミティブ型はシンボルで指定します (例 `:int`, `:bool`, `:float`, `:string`)。
+プリミティブ型はシンボルで指定します (例 `:int`, `:bool`, `:float`, `:string`, `:symbol`)。
 
 ```ruby
 class User < TypedStruct
     define :name,           :string
     define :age,            :int
     define :email_verified, :bool
+    define :type,           :symbol
 end
 ```
 

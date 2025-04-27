@@ -41,10 +41,9 @@ class NilableStruct < TypedStruct
   define :n, :int, allow: 'nil'
 end
 
-# TODO: これはあったほうがよさそうな気がする...
-# class SymbolStruct < TypedStruct
-#   define :sym, :symbol
-# end
+class SymbolStruct < TypedStruct
+  define :sym, :symbol
+end
 
 describe 'TypedStruct の基本操作' do
   it 'プリミティブ型の初期値を未指定' do
@@ -163,6 +162,13 @@ describe 'TypedStruct の基本操作' do
     filled.n = nil
     expect(filled.n).to eq nil
   end
+
+  it 'symbol型の定義' do
+    foo = SymbolStruct.new(sym: :foo)
+    expect(foo.sym).to eq :foo
+
+    expect { foo.sym = 'foo' }.to raise_error TypeError
+  end
 end
 
 describe 'TypeStruct で JSON を扱える' do
@@ -187,6 +193,9 @@ describe 'TypeStruct で JSON を扱える' do
 
     v = BoolStruct.new b: false
     expect(TypedSerialize::JSON.marshal(v)).to eq '{"b":false}'
+
+    v = SymbolStruct.new(sym: :foo)
+    expect(TypedSerialize::JSON.marshal(v)).to eq '{"sym":"foo"}'
   end
 
   it 'jsonから変換できる' do
@@ -218,6 +227,9 @@ describe 'TypeStruct で JSON を扱える' do
 
     bool_false = TypedSerialize::JSON.unmarshal('{"b":false}', BoolStruct)
     expect(bool_false.b).to eq false
+
+    sym = TypedSerialize::JSON.unmarshal('{"sym":"foo"}', SymbolStruct)
+    expect(sym.sym).to eq :foo
   end
 
   it 'jsonからのパース時、型が違ったらエラーを吐ける' do
