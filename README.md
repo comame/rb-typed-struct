@@ -1,3 +1,10 @@
+```
+# Gemfile
+
+gem 'typed_struct', github: 'comame/rb-typed-struct'
+```
+
+
 # TypedStruct
 
 TypedStruct は実行時に型チェックされる構造体を定義します。
