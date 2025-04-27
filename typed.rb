@@ -16,7 +16,7 @@ module Typed
         String => '',
         Float => 0.0,
         Boolean::BooleanClass => false,
-        Symbol => ''.to_sym,
+        Symbol => :"",
         Object => nil
       }
 
@@ -364,9 +364,8 @@ module TypedSerialize
 
     # 複数のドキュメントの YAML 文字列に変換する。
     def marshal_stream(list)
-      serialized_list = []
-      list.each do |v|
-        serialized_list.append(Hash.marshal(v))
+      serialized_list = list.map do |v|
+        Hash.marshal(v)
       end
 
       y = ::YAML.dump_stream(*serialized_list)

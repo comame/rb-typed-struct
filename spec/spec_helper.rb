@@ -10,5 +10,5 @@ SimpleCov.start do
 end
 
 # https://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
-RSpec.configure do |config|
+RSpec.configure do |config| # rubocop:disable Lint/EmptyBlock
 end
