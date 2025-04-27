@@ -2,6 +2,8 @@ AllCops:
   NewCops: enable
   SuggestExtensions: false
 
+Gemspec/RequiredRubyVersion:
+  Enabled: false
 Layout/LineLength:
   Enabled: false
 Metrics/AbcSize:

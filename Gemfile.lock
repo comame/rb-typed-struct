@@ -1,3 +1,8 @@
+PATH
+  remote: .
+  specs:
+    typed_struct (1.0.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -60,6 +65,7 @@ DEPENDENCIES
   rspec
   rubocop
   simplecov
+  typed_struct!
 
 BUNDLED WITH
    2.6.7

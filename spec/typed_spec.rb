@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 require 'rspec'
-require './typed'
+
+require 'typed_struct'
 
 # 代入時に型チェックされる構造体を記述できる
 class NormalStruct < TypedStruct
