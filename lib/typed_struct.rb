@@ -120,10 +120,14 @@ module Typed
 
       return v.is_a?(typedef) if typed_struct_typedef? typedef
 
-      # 配列型の要素は nil 許容にさせない。
-      # うまい typedef の表記を思いつかないし、そもそも配列の中に nil を混ぜる設計自体があまりよくないので。
-      # どうしても必要なら [:any] で表現してほしい。
-      return v.all? { |el| type_correct?(typedef[0], el, false) } if array_typedef? typedef
+      if array_typedef? typedef
+        return false unless v.is_a? Array
+
+        # 配列型の要素は nil 許容にさせない。
+        # うまい typedef の表記を思いつかないし、そもそも配列の中に nil を混ぜる設計自体があまりよくないので。
+        # どうしても必要なら [:any] で表現してほしい。
+        return v.all? { |el| type_correct?(typedef[0], el, false) }
+      end
 
       raise ArgumentError, "typedef #{typedef.inspect} is not supported"
     end

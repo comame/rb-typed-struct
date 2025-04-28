@@ -88,7 +88,7 @@ describe '代入時に型チェックできるかどうか？' do
     obj.arr = []
     expect(obj.arr).to eq []
 
-    expect { obj.arr = [1, 2, 3] }.to raise_error Exception # FIXME: TypeError のほうが親切
+    expect { obj.arr = [1, 2, 3] }.to raise_error TypeError
     expect { obj.arr = [['one']] }.to raise_error TypeError
   end
 
