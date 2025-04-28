@@ -281,14 +281,6 @@ class TypedStruct
     end
   end
 
-  def []=(key, value)
-    assign! key.to_sym, value
-  end
-
-  def [](key)
-    instance_variable_get "@#{key}"
-  end
-
   # JSONにシリアライズする
   def serialize
     hash = {}
