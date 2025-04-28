@@ -171,6 +171,29 @@ describe 'Hashから変換できることを型ごとにチェック' do
     expect(obj[0].n).to eq 1
     expect(obj[1].n).to eq 2
   end
+
+  it 'any型' do
+    c = Class.new(TypedStruct) do
+      define :value, :any
+    end
+
+    hash = { 'value' => 1 }
+    obj = TypedSerialize::Hash.unmarshal hash, c
+
+    expect(obj.value).to eq 1
+
+    hash = { 'value' => { 'a' => 'b' } }
+    obj = TypedSerialize::Hash.unmarshal hash, c
+
+    expect(obj.value).to be_a Hash
+    expect(obj.value).to eq({ 'a' => 'b' })
+
+    hash = { 'value' => %w[a b] }
+    obj = TypedSerialize::Hash.unmarshal hash, c
+
+    expect(obj.value).to be_a Array
+    expect(obj.value).to eq(%w[a b])
+  end
 end
 
 describe '初期値' do
