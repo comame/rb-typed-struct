@@ -235,7 +235,7 @@ class TypedStruct
         tag = __tags[key]
 
         json_tag_key = Typed::Internal::JSONTag.json_key_or_nil tag
-        json_key = json_tag_key.nil? ? key : json_tag_key.to_sym
+        json_key = json_tag_key.nil? ? key.to_s : json_tag_key
 
         v = hash.fetch(json_key, nil)
 
@@ -347,7 +347,7 @@ module TypedSerialize
     # JSON 文字列から typedef で指定した型に変換する。
     # オブジェクトが self.deserialize(Hash) -> T あるいは self.deserialize_elements(Hash, U) -> T<U> のいずれかのメソッドを持つ場合、その結果を使って変換する。
     def unmarshal(data, typedef)
-      h = ::JSON.parse data, symbolize_names: true
+      h = ::JSON.parse data
       Hash.unmarshal h, typedef
     end
   end
@@ -364,7 +364,7 @@ module TypedSerialize
 
     # 単一の YAML をパースする。
     def unmarshal(data, typedef)
-      h = ::YAML.safe_load data, symbolize_names: true, aliases: true
+      h = ::YAML.safe_load data, aliases: true
       Hash.unmarshal h, typedef
     end
   end
