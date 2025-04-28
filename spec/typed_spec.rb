@@ -373,23 +373,6 @@ describe 'yaml' do
     EOF
   end
 
-  it 'ストリームを変換できる' do
-    c = Class.new(TypedStruct) do
-      define :integer_field, :int
-      define :string_field, :string, json: 'string' # FIXME: yamlキーでタグ付けできるようにする
-    end
-
-    obj = c.new(integer_field: 3, string_field: 'hello')
-    y = TypedSerialize::YAML.marshal_stream [obj, obj]
-    expect(y).to eq <<~EOF
-      integer_field: 3
-      string: hello
-      ---
-      integer_field: 3
-      string: hello
-    EOF
-  end
-
   it 'パースできる' do
     c = Class.new(TypedStruct) do
       define :integer_field, :int
@@ -404,29 +387,5 @@ describe 'yaml' do
     obj = TypedSerialize::YAML.unmarshal(y, c)
     expect(obj.integer_field).to eq 3
     expect(obj.string_field).to eq 'hello'
-  end
-
-  it '複数オブジェクトをパースできる' do
-    c = Class.new(TypedStruct) do
-      define :integer_field, :int
-      define :string_field, :string, json: 'string' # FIXME: yamlキーでタグ付けできるようにする
-    end
-
-    y = <<~EOF
-      integer_field: 3
-      string: hello
-      ---
-      integer_field: 10
-      string: world!
-    EOF
-
-    objects = TypedSerialize::YAML.unmarshal_stream(y, [c, c])
-    expect(objects.length).to eq 2
-
-    expect(objects[0].integer_field).to eq 3
-    expect(objects[0].string_field).to eq 'hello'
-
-    expect(objects[1].integer_field).to eq 10
-    expect(objects[1].string_field).to eq 'world!'
   end
 end

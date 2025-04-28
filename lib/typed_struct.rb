@@ -362,36 +362,10 @@ module TypedSerialize
       y.delete_prefix "---\n"
     end
 
-    # 複数のドキュメントの YAML 文字列に変換する。
-    def marshal_stream(list)
-      serialized_list = list.map do |v|
-        Hash.marshal(v)
-      end
-
-      y = ::YAML.dump_stream(*serialized_list)
-      y.delete_prefix "---\n"
-    end
-
     # 単一の YAML をパースする。
     def unmarshal(data, typedef)
       h = ::YAML.safe_load data, symbolize_names: true, aliases: true
       Hash.unmarshal h, typedef
-    end
-
-    # 複数ドキュメントの YAML をパースする
-    def unmarshal_stream(data, typedefs)
-      docs = data.split '---'
-      docs.filter! do |v|
-        v.strip != ''
-      end
-
-      ret = []
-      typedefs.each do |typedef|
-        doc = docs.shift
-        ret.append unmarshal(doc, typedef)
-      end
-
-      ret
     end
   end
 
