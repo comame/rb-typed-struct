@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    typed_struct (1.0.0)
+    typed_struct (1.0.1)
 
 GEM
   remote: https://rubygems.org/
